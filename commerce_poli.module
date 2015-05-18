@@ -88,7 +88,7 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
       $form['#action'] = $response->data->NavigateURL;
 
       // Create a payment transaction.
-      $transaction                = commerce_payment_transaction_new('commerce_poli', $order->order_id);
+      $transaction                = commerce_payment_transaction_new('poli', $order->order_id);
       $transaction->instance_id   = $payment_method['instance_id'];
       $transaction->remote_id     = $response->data->TransactionRefNo;
       $transaction->amount        = $wrapper->commerce_order_total->amount->value();
