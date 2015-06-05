@@ -8,6 +8,17 @@
 // POLi Payments API URL.
 define('COMMERCE_POLI_API', 'https://poliapi.apac.paywithpoli.com/api');
 
+function commerce_poli_menu() {
+  $items['commerce_poli/nudge/%'] = array(
+    'page callback'   => 'commerce_poli_process_transaction',
+    'page arguments'  => array(2),
+    'access callback' => TRUE,
+    'type'            => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
 /**
  * Implements hook_commerce_payment_method_info().
  */
@@ -68,6 +79,7 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
     'SuccessURL'          => url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
     'FailureURL'          => url('checkout/' . $order->order_id . '/payment/return/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
     'CancellationURL'     => url('checkout/' . $order->order_id . '/payment/back/' . $order->data['payment_redirect_key'], array('absolute' => TRUE)),
+    'NotificationURL'     => url('commerce_poli/nudge/' . $payment_method['instance_id'], array('absolute' => TRUE)),
   );
 
   // Execute 'Transaction/Initiate' method.
@@ -121,9 +133,19 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
  * Payment method callback: redirect form return validation.
  */
 function commerce_poli_redirect_form_validate($order, $payment_method) {
-  if (isset($_GET['token'])) {
+  commerce_poli_process_transaction($payment_method['instance_id']);
+}
+
+/**
+ * Process POLi transaction as provided by token.
+ */
+function commerce_poli_process_transaction($instance_id) {
+  if (isset($_POST['Token']) || isset($_GET['token'])) {
     // Get token provided by POLi Payments.
-    $token = urlencode($_GET['token']);
+    $token = isset($_POST['Token']) ? urlencode($_POST['Token']) : urlencode($_GET['token']);
+
+    // Load payment method.
+    $payment_method = commerce_payment_method_instance_load($instance_id);
 
     // Execute 'Transaction/GetTransaction' method.
     $url      = COMMERCE_POLI_API . '/Transaction/GetTransaction?token=' . $token;
@@ -191,10 +213,6 @@ function commerce_poli_redirect_form_validate($order, $payment_method) {
     if ($payment_method['settings']['debug']) {
       watchdog('commerce_poli', '<strong>' . t('Transaction/GetTransaction response') . ':</strong><br /><pre>' . print_r($response, TRUE) . '</pre>');
     }
-  }
-
-  else {
-    // Error.
   }
 }
 
