@@ -133,13 +133,17 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
  * Payment method callback: redirect form return validation.
  */
 function commerce_poli_redirect_form_validate($order, $payment_method) {
-  commerce_poli_process_transaction($payment_method['instance_id']);
+  $transaction = commerce_poli_process_transaction($payment_method['instance_id'], TRUE);
+
+  if ($transaction->status == COMMERCE_PAYMENT_STATUS_FAILURE) {
+    return FALSE;
+  }
 }
 
 /**
  * Process POLi transaction as provided by token.
  */
-function commerce_poli_process_transaction($instance_id) {
+function commerce_poli_process_transaction($instance_id, $return = FALSE) {
   if (isset($_POST['Token']) || isset($_GET['token'])) {
     // Get token provided by POLi Payments.
     $token = isset($_POST['Token']) ? urlencode($_POST['Token']) : urlencode($_GET['token']);
@@ -212,6 +216,10 @@ function commerce_poli_process_transaction($instance_id) {
     // Log response.
     if ($payment_method['settings']['debug']) {
       watchdog('commerce_poli', '<strong>' . t('Transaction/GetTransaction response') . ':</strong><br /><pre>' . print_r($response, TRUE) . '</pre>');
+    }
+
+    if (isset($transaction) && $return) {
+      return $transaction;
     }
   }
 }
