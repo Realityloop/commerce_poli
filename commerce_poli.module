@@ -195,19 +195,11 @@ function commerce_poli_process_transaction($instance_id, $return = FALSE) {
           break;
 
         case 'Failed':
-          $transaction->status  = COMMERCE_PAYMENT_STATUS_FAILURE;
-          $transaction->message = t('The payment has failed.');
-          break;
-
         case 'ReceiptUnverified':
+        case 'Cancelled':
+        case 'TimedOut':
           $transaction->status  = COMMERCE_PAYMENT_STATUS_FAILURE;
           $transaction->message = $response->data->ErrorMessage;
-          break;
-
-        case 'Cancelled':
-          break;
-
-        case 'TimedOut':
           break;
       }
 
