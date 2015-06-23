@@ -165,46 +165,50 @@ function commerce_poli_process_transaction($instance_id, $return = FALSE) {
       $response->data = json_decode($response->data);
 
       // Update payment transaction.
-      $transactions                       = commerce_payment_transaction_load_multiple(array(), array('remote_id' => $response->data->TransactionRefNo));
-      $transaction                        = reset($transactions);
-      $transaction->remote_id             = $response->data->TransactionRefNo;
-      $transaction->amount                = commerce_currency_decimal_to_amount($response->data->AmountPaid, $response->data->CurrencyCode);
-      $transaction->currency_code         = $response->data->CurrencyCode;
-      $transaction->payload[REQUEST_TIME] = $response->data;
-      $transaction->remote_status         = $response->data->TransactionStatusCode;
+      $transactions = commerce_payment_transaction_load_multiple(array(), array('remote_id' => $response->data->TransactionRefNo));
+      $transaction  = reset($transactions);
 
-      switch ($response->data->TransactionStatusCode) {
-        case 'Initiated':
-          break;
+      // Prevent individual transaction being processed multiple times.
+      if ($transaction->status == COMMERCE_PAYMENT_STATUS_PENDING) {
+        $transaction->remote_id             = $response->data->TransactionRefNo;
+        $transaction->amount                = commerce_currency_decimal_to_amount($response->data->AmountPaid, $response->data->CurrencyCode);
+        $transaction->currency_code         = $response->data->CurrencyCode;
+        $transaction->payload[REQUEST_TIME] = $response->data;
+        $transaction->remote_status         = $response->data->TransactionStatusCode;
 
-        case 'FinancialInstitutionSelected':
-          break;
+        switch ($response->data->TransactionStatusCode) {
+          case 'Initiated':
+            break;
 
-        case 'EULAAccepted':
-          break;
+          case 'FinancialInstitutionSelected':
+            break;
 
-        case 'InProcess':
-          break;
+          case 'EULAAccepted':
+            break;
 
-        case 'Completed':
-          $transaction->status  = COMMERCE_PAYMENT_STATUS_SUCCESS;
-          $transaction->message = t('The payment has completed.');
-          break;
+          case 'InProcess':
+            break;
 
-        case 'Unknown':
-          break;
+          case 'Completed':
+            $transaction->status  = COMMERCE_PAYMENT_STATUS_SUCCESS;
+            $transaction->message = t('The payment has completed.');
+            break;
 
-        case 'Failed':
-        case 'ReceiptUnverified':
-        case 'Cancelled':
-        case 'TimedOut':
-          $transaction->status  = COMMERCE_PAYMENT_STATUS_FAILURE;
-          $transaction->message = $response->data->ErrorMessage;
-          break;
+          case 'Unknown':
+            break;
+
+          case 'Failed':
+          case 'ReceiptUnverified':
+          case 'Cancelled':
+          case 'TimedOut':
+            $transaction->status  = COMMERCE_PAYMENT_STATUS_FAILURE;
+            $transaction->message = $response->data->ErrorMessage;
+            break;
+        }
+
+        // Save the transaction information.
+        commerce_payment_transaction_save($transaction);
       }
-
-      // Save the transaction information.
-      commerce_payment_transaction_save($transaction);
     }
 
     // Log response.
