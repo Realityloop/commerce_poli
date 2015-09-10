@@ -103,15 +103,22 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
   );
 
   // Execute 'Transaction/Initiate' method.
-  $url      = COMMERCE_POLI_API . '/Transaction/Initiate';
-  $response = drupal_http_request($url, array(
+  $url     = COMMERCE_POLI_API . '/Transaction/Initiate';
+  $options = array(
     'method'  => 'POST',
     'data'    => json_encode($data),
     'headers' => array(
       'Content-Type'  => 'application/json',
       'Authorization' => _commerce_poli_authentication_string($payment_method['settings']),
     ),
-  ));
+  );
+  $context = array(
+    'order'          => $order,
+    'payment_method' => $payment_method,
+    'type'           => 'Initiate',
+  );
+  drupal_alter('commerce_poli_http_request', $url, $options, $context);
+  $response = drupal_http_request($url, $options);
 
   if ($response->code == 200) {
     $response->data = json_decode($response->data);
@@ -184,14 +191,20 @@ function commerce_poli_process_transaction($instance_id, $return = FALSE) {
     $payment_method = commerce_payment_method_instance_load($instance_id);
 
     // Execute 'Transaction/GetTransaction' method.
-    $url      = COMMERCE_POLI_API . '/Transaction/GetTransaction?token=' . $token;
-    $response = drupal_http_request($url, array(
+    $url     = COMMERCE_POLI_API . '/Transaction/GetTransaction?token=' . $token;
+    $options = array(
       'method'  => 'GET',
       'headers' => array(
         'Content-Type'  => 'application/json',
         'Authorization' => _commerce_poli_authentication_string($payment_method['settings']),
       ),
-    ));
+    );
+    $context = array(
+      'payment_method' => $payment_method,
+      'type'           => 'GetTransaction',
+    );
+    drupal_alter('commerce_poli_http_request', $url, $options, $context);
+    $response = drupal_http_request($url, $options);
 
     if ($response->code == 200) {
       $response->data = json_decode($response->data);
