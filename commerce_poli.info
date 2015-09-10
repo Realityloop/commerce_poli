@@ -1,7 +1,9 @@
 name = POLi Payments
 description = Implements the POLi payments service for use with Drupal Commerce.
 package = Commerce
-dependencies[] = commerce_payment
+dependencies[] = commerce
+test_dependencies[] = addressfield
+test_dependencies[] = views
 core = 7.x
 
 
