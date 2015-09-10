@@ -8,6 +8,9 @@
 // POLi Payments API URL.
 define('COMMERCE_POLI_API', 'https://poliapi.apac.paywithpoli.com/api');
 
+/**
+ * @return mixed
+ */
 function commerce_poli_menu() {
   $items['commerce_poli/nudge/%'] = array(
     'page callback'   => 'commerce_poli_process_transaction',
@@ -21,6 +24,8 @@ function commerce_poli_menu() {
 
 /**
  * Implements hook_commerce_payment_method_info().
+ *
+ * @return mixed
  */
 function commerce_poli_commerce_payment_method_info() {
   $payment_methods['poli'] = array(
@@ -38,6 +43,10 @@ function commerce_poli_commerce_payment_method_info() {
 
 /**
  * Payment method callback: settings form.
+ *
+ * @param array $settings
+ *
+ * @return mixed
  */
 function commerce_poli_settings_form($settings = array()) {
   $form['merchant_code'] = array(
@@ -66,9 +75,20 @@ function commerce_poli_settings_form($settings = array()) {
 
 /**
  * Payment method callback: redirect form.
+ *
+ * @param $form
+ * @param $form_state
+ * @param $order
+ * @param $payment_method
+ *
+ * @return mixed
  */
 function commerce_poli_redirect_form($form, &$form_state, $order, $payment_method) {
   $wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+  if (!isset($wrapper->commerce_order_total) && !isset($wrapper->order_id)) {
+    return array();
+  }
 
   // Build 'Transaction/Initiate' method data.
   $data = array(
@@ -89,7 +109,7 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
     'data'    => json_encode($data),
     'headers' => array(
       'Content-Type'  => 'application/json',
-      'Authorization' => _commerce_poli_authenication_string($payment_method['settings']),
+      'Authorization' => _commerce_poli_authentication_string($payment_method['settings']),
     ),
   ));
 
@@ -127,10 +147,17 @@ function commerce_poli_redirect_form($form, &$form_state, $order, $payment_metho
   else {
     // Error.
   }
+
+  return array();
 }
 
 /**
  * Payment method callback: redirect form return validation.
+ *
+ * @param $order
+ * @param $payment_method
+ *
+ * @return bool
  */
 function commerce_poli_redirect_form_validate($order, $payment_method) {
   $transaction = commerce_poli_process_transaction($payment_method['instance_id'], TRUE);
@@ -142,6 +169,11 @@ function commerce_poli_redirect_form_validate($order, $payment_method) {
 
 /**
  * Process POLi transaction as provided by token.
+ *
+ * @param            $instance_id
+ * @param bool|FALSE $return
+ *
+ * @return mixed
  */
 function commerce_poli_process_transaction($instance_id, $return = FALSE) {
   if (isset($_POST['Token']) || isset($_GET['token'])) {
@@ -157,7 +189,7 @@ function commerce_poli_process_transaction($instance_id, $return = FALSE) {
       'method'  => 'GET',
       'headers' => array(
         'Content-Type'  => 'application/json',
-        'Authorization' => _commerce_poli_authenication_string($payment_method['settings']),
+        'Authorization' => _commerce_poli_authentication_string($payment_method['settings']),
       ),
     ));
 
@@ -220,11 +252,17 @@ function commerce_poli_process_transaction($instance_id, $return = FALSE) {
       return $transaction;
     }
   }
+
+  return FALSE;
 }
 
 /**
  * Helper function; build authentication string.
+ *
+ * @param array $settings
+ *
+ * @return string
  */
-function _commerce_poli_authenication_string($settings = array()) {
+function _commerce_poli_authentication_string($settings = array()) {
   return 'Basic ' . base64_encode("{$settings['merchant_code']}:{$settings['authentication_code']}");
 }

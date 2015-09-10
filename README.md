@@ -1,5 +1,7 @@
 # Commerce POLi Payments
---------------------------------------------------------------------------------
+
+[![Build Status](https://travis-ci.org/Realityloop/commerce_poli.svg?branch=7.x-1.x)]
+(https://travis-ci.org/Realityloop/commerce_poli)
 
 The Commerce POLi Payments module adds the [POLi Payments]
 (https://www.polipayments.com/) payment gateway to Drupal Commerce.
@@ -13,13 +15,5 @@ Initial development was sponsored by [The Wilderness Society Inc]
 
 
 ## Required modules
---------------------------------------------------------------------------------
 
 * [Drupal Commerce](https://www.drupal.org/project/commerce)
-
-
-
-## TODO
---------------------------------------------------------------------------------
-
-* Add/improve error handling.
