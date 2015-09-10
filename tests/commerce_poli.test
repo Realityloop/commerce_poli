@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * @file
+ * Tests for the POLi Payments module.
+ */
+
+/**
+ * Class CommercePOLiTestCase
+ */
+class CommercePOLiTestCase extends CommerceBaseTestCase {
+  protected $store_admin;
+
+  /**
+   * @inheritdoc
+   */
+  public static function getInfo() {
+    return array(
+      'name'        => t('POLi Payments'),
+      'description' => t('Test basic POLi Payments functionality.'),
+      'group'       => t('Commerce POLi Payments'),
+    );
+  }
+
+  /**
+   * @inheritdoc
+   */
+  public function setUp() {
+    $modules   = parent::setUpHelper('all');
+    $modules[] = 'commerce_poli';
+    parent::setUp($modules);
+
+    $this->store_admin = $this->createStoreAdmin();
+    cache_clear_all(); // Just in case
+  }
+
+  /**
+   * Tests basic POLi Payments functionality.
+   */
+  public function testPOLiPayments() {
+    // Login as Store admin user.
+    $this->drupalLogin($this->store_admin);
+
+    // Ensure POLi Payments payment method exists.
+    $this->drupalGet('admin/commerce/config/payment-methods');
+    $this->assertLink(t('POLi Payments'));
+
+    // Enable the POLi Payments payment method.
+    $this->clickLink(t('POLi Payments'));
+    $edit = array('settings[active]' => TRUE);
+    $this->drupalPost(NULL, $edit, t('Save changes'));
+
+    // Configure the POLi Payments payment method.
+    $this->clickLink(t('Enable payment method: POLi Payments'));
+    $edit = array(
+      'parameter[payment_method][settings][payment_method][settings][merchant_code]'       => $this->randomName(),
+      'parameter[payment_method][settings][payment_method][settings][authentication_code]' => $this->randomString(),
+      'parameter[payment_method][settings][payment_method][settings][debug]'               => TRUE,
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+
+    // Ensure changes have been saved.
+    $this->assertText(t('Your changes have been saved.'));
+
+    // Create a dummy order.
+    $this->createDummyOrder($this->store_admin->uid);
+
+    // Checkout dummy order.
+    $address = $this->generateAddressInformation();
+    $edit    = array('customer_profile_billing[commerce_customer_address][und][0][country]' => 'AU');
+    $this->drupalPost($this->getCommerceUrl('checkout'), $edit, t('Continue to next step'));
+    $edit = array(
+      'customer_profile_billing[commerce_customer_address][und][0][name_line]'           => $address['name_line'],
+      'customer_profile_billing[commerce_customer_address][und][0][thoroughfare]'        => $address['thoroughfare'],
+      'customer_profile_billing[commerce_customer_address][und][0][locality]'            => $address['locality'],
+      'customer_profile_billing[commerce_customer_address][und][0][administrative_area]' => 'ACT',
+      'customer_profile_billing[commerce_customer_address][und][0][postal_code]'         => 2600,
+    );
+    $this->drupalPost(NULL, $edit, t('Continue to next step'));
+
+    // Ensure POLi Payments payment method is available.
+    $this->assertFieldById('edit-commerce-payment-payment-method-policommerce-payment-poli');
+
+    // Ensure paying with POLi Payments will show to payment redirect page.
+    $edit = array('commerce_payment[payment_method]' => 'poli|commerce_payment_poli');
+    $this->drupalPost(NULL, $edit, t('Continue to next step'));
+    $this->assertText(t('Please wait while you are redirected to the payment server. If nothing happens within 10 seconds, please click on the button below.'));
+  }
+}
